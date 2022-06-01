@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>01 - react基本使用</title>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- react js -->
+    <script src="./node_modules/react/umd/react.development.js"></script>
+    <script src="./node_modules/react-dom/umd/react-dom.development.js"></script>
+
+    <script>
+      /**
+       * 创建react元素
+       *
+       * @param p1 元素名称
+       * @param p2 元素属性
+       * @param p3 元素的子节点
+       */
+      const title = React.createElement(
+        "h1",
+        { title: "标题" },
+        "Hello React",
+        React.createElement("br", null, null),
+        React.createElement("span", null, "Hello Span")
+      );
+
+      /**
+       * 渲染react元素：以root为挂载点，渲染title元素。
+       */
+      ReactDOM.createRoot(document.getElementById("root")).render(title);
+    </script>
+  </body>
+</html>
