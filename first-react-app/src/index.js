@@ -6,6 +6,13 @@ import Hello from './component/HelloComponent';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
+const title = React.createElement("h1", { title: "标题" }, "Hello React");
+root.render(title);
+
+// 使用JSX语法创建react元素
+const jsxTitle = <h1 title='标题'>Hello JSX!</h1>;
+root.render(jsxTitle);
+
 // JSX中用 {name} 语法引用js中的变量、函数调用等表达式。（JXS本身也是一个表达式）
 const name = "SunChaser";
 const sayFun = () => "Say Hi~";
@@ -13,14 +20,14 @@ const subJsx = <div>sub JSX</div>;
 root.render(
   (
     <div>
-      <h1 className='hello-class'>Hello React!!!</h1>
-      <br />
+      <h1 className='hello-class'>Hello React!!!</h1><br />
       <span>Hello JSX!</span>
       <p>Hello {name}</p>
       <p>{1}</p>
       <p>{'a'}</p>
       <p>{1 + 7}</p>
       <p>{3 > 5 ? "大于" : "不大于"}</p>
+      <p>{() => "Hi!~"}</p>
       <p>{sayFun()}</p>
       {subJsx}
       {/* 注释 */}
@@ -135,7 +142,7 @@ class Stateful extends React.Component {
   // constructor() {
   //   super()// ES6固定写法
   //   this.state = {
-  //     count: 0
+  //     count: 0 // 初始化count
   //   }
   // }
 
@@ -147,7 +154,7 @@ class Stateful extends React.Component {
 
   // 简化语法
   state = {
-    count: 0
+    count: 0 // 初始化count
   };
 
   render() {
@@ -155,13 +162,14 @@ class Stateful extends React.Component {
       <div>
         计数器: count = {this.state.count}
         <br />
-        {/* <button onClick={
+        <button onClick={
           () => {
             this.setState({
               count: this.state.count + 1// 设置新值：获取旧值并+1
             })
+            // this.state.count += 1;// 错误写法！！！
           }
-        }>+1</button> */}
+        }>+1</button>
         {/* 1. 箭头函数中的this指向外部环境，此处为render()方法 */}
         <button onClick={() => this.onIncrement()}>+1</button>
         {/* 2. 使用Function.prototype.bind(): ES5中的bind方法，将方法中的this与组件实例绑定在一起。 */}
@@ -173,6 +181,7 @@ class Stateful extends React.Component {
   }
 
   onIncrement() {
+    console.log("onIncrement中的this: " + this);
     this.setState({
       count: this.state.count + 1// 设置新值：获取旧值并+1
     })
