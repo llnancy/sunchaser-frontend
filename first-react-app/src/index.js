@@ -1,9 +1,14 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { BrowserRouter as Router, Routes, Route, NavLink, Navigate, useRoutes } from 'react-router-dom';
 import './index.css';
 import reportWebVitals from './reportWebVitals';
 import Hello from './component/HelloComponent';
+// props类型校验
 import PropTypes from 'prop-types';
+// 导入图片资源
+import img from './assets/images/logo192.png';
+import routes from './routes';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
@@ -648,6 +653,8 @@ root.render(<DefaultValue />);
 
 /**
  * 类组件生命周期
+ * https://projects.wojtekmaj.pl/react-lifecycle-methods-diagram/
+ * https://zh-hans.reactjs.org/docs/react-component.html
  */
 
 /**
@@ -792,6 +799,472 @@ class UninstallCount extends React.Component {
   }
 }
 root.render(<UninstallingLifeCycle />);
+
+/**
+ * 状态逻辑复用
+ * render-props模式：props是一个函数，其返回值是组件要渲染的内容。
+ * 使用步骤：
+ * 1. 创建Mouse组件，在组件中提供复用的状态逻辑代码（状态和操作状态的方法）。
+ * 2. 将要复用的状态作为props.render(state)方法的参数，暴露到组件外部。
+ * 3. 使用props.render()的返回值作为要渲染的内容。
+ */
+class Mouse extends React.Component {
+
+  state = {
+    x: 0,
+    y: 0
+  }
+
+  render() {
+    return this.props.children(this.state);
+  }
+
+  // 生命周期方法中监听鼠标移动事件
+  componentDidMount() {
+    window.addEventListener("mousemove", this.handleMousemove);
+  }
+
+  // 组件卸载时移除鼠标移动监听事件
+  componentWillUnmount() {
+    window.removeEventListener("mousemove", this.handleMousemove);
+  }
+
+  handleMousemove = (e) => {
+    this.setState({
+      x: e.clientX,
+      y: e.clientY
+    })
+  }
+}
+
+// Mouse组件props校验
+Mouse.propTypes = {
+  children: PropTypes.func.isRequired // children是一个函数且必填
+}
+
+// 将箭头函数传递给子组件Mouse的renderFun这个props
+// 子组件Mouse中的render方法调用传入的renderFun箭头函数并传递子组件Mouse的状态state
+// 箭头函数中获取state并返回JSX给子组件的render方法进行渲染。
+class MouseApp extends React.Component {
+
+  render() {
+    return (
+      <div>
+        <p>render-props模式</p>
+        {/* <Mouse
+          renderFun={
+            (mouse) => {
+              return <p>鼠标位置：[{mouse.x}, {mouse.y}]</p>
+            }
+          }
+        />
+        <Mouse
+          renderFun={
+            (mouse) => {
+              return (
+                <img
+                  src={img}
+                  alt="图片"
+                  style={
+                    {
+                      position: 'absolute',
+                      top: mouse.y - 96,
+                      left: mouse.x - 96
+                    }
+                  }
+                />
+              )
+            }
+          }
+        /> */}
+
+        {/*
+        children代替renderFun：
+        例如跨组件传递数据的Context中的Consumer用法：
+        <Consumer>
+          {
+            data => <span>{data}</span>
+          }
+        </Consumer>
+         */}
+        <Mouse>
+          {
+            (mouse) => {
+              return <p>鼠标位置：[{mouse.x}, {mouse.y}]</p>
+            }
+          }
+        </Mouse>
+        <Mouse>
+          {
+            (mouse) => {
+              return (
+                <img
+                  src={img}
+                  alt="图片"
+                  style={
+                    {
+                      position: 'absolute',
+                      top: mouse.y - 96,
+                      left: mouse.x - 96
+                    }
+                  }
+                />
+              )
+            }
+          }
+        </Mouse>
+      </div>
+    );
+  }
+}
+root.render(<MouseApp />);
+
+/**
+ * 高阶组件：HOC（Higher-Order Component）。是一个函数，接收要包装的组件，返回增强后的组件。（装饰器设计模式）
+ * 使用步骤：
+ * 1. 创建一个函数，名称约定以with开头。
+ * 2. 指定函数参数，参数以大写字母开头（作为要渲染的组件）。
+ * 3. 在函数内部创建一个类组件，提供复用的状态逻辑代码。函数的返回值为该类组件。
+ * 4. 在类组件中，渲染参数组件，同时将状态通过props传递给参数组件。
+ */
+function withMouse(WrappedComponent) {  // 1. 创建一个函数，名称约定以with开头。// 2. 指定函数参数，参数以大写字母开头（作为要渲染的组件）。
+
+  class Mouse extends React.Component {
+
+    state = {
+      x: 0,
+      y: 0
+    }
+
+    componentDidMount() {
+      window.addEventListener("mousemove", this.handleMousemove);
+    }
+
+    componentWillUnmount() {
+      window.removeEventListener("mousemove", this.handleMousemove);
+    }
+
+    handleMousemove = e => {
+      this.setState({
+        x: e.clientX,
+        y: e.clientY
+      })
+    }
+
+    render() {
+      // 4. 在类组件中，渲染参数组件，同时将状态通过props传递给参数组件。
+      return (
+        // 向下传递props避免丢失
+        <WrappedComponent {...this.state} {...this.props} />
+      )
+    }
+  }
+
+  // 设置Mouse的displayName，避免使用高阶组件时得到两个同名的组件（默认情况下React使用组件名称作为displayName）。
+  // 公共WithMouse前缀
+  Mouse.displayName = `WithMouse${getDisplayName(WrappedComponent)}`;
+
+  // 3. 在函数内部创建一个类组件，提供复用的状态逻辑代码。函数的返回值为该类组件。
+  return Mouse;
+}
+
+function getDisplayName(WrappedComponent) {
+  return WrappedComponent.displayName || WrappedComponent.name || 'Component'
+}
+
+// 函数组件Position
+const Position = (props) => {
+  return (
+    <p>
+      鼠标位置：[{props.x}, {props.y}]
+    </p>
+  )
+}
+
+const Img = (props) => (
+  <img
+    src={img}
+    alt="图片"
+    style={
+      {
+        position: 'absolute',
+        top: props.y - 96,
+        left: props.x - 96
+      }
+    }
+  />
+);
+
+// 获取增强后的组件
+const MousePosition = withMouse(Position);
+const MouseImg = withMouse(Img);
+
+class EnhanceComponent extends React.Component {
+  render() {
+    return (
+      <div>
+        <p>高阶组件</p>
+        {/* 渲染增强后的组件 */}
+        <MousePosition />
+        <MouseImg />
+      </div>
+    );
+  }
+}
+root.render(<EnhanceComponent />);
+
+/**
+ * setState()方法是异步更新数据的。使用该语法时，后面的setState()不要依赖于前面的setState()
+ * 多次调用setState()方法只会触发一次render重新渲染。
+ * 
+ * 推荐语法: setState((state, props) => {})
+ * 回调函数（也是异步更新数据）
+ * 
+ * state: 最新的state
+ * props: 最新的props
+ * 
+ * this.setState((state, props) => {
+ *   return {
+ *     count: state.count + 1
+ *   }
+ * });
+ * 
+ * setState(updater[, callback])
+ * 第二个参数：callback回调函数。状态更新完后并且render重新渲染后立即执行。
+ */
+
+/**
+ * JSX是createElement()方法的语法糖
+ * JSX语法被@babel/preset-react插件编译为createElement()方法
+ * React元素：是一个对象，描述在浏览器页面上显示的内容。
+ */
+
+/**
+ * 组件更新机制：
+ * setState()方法的两个作用：
+ * 1. 修改state。
+ * 2. 更新组件UI（重新渲染）。
+ * 父组件重新渲染时，当前组件及其所有子组件都会重新渲染。
+ */
+
+/**
+ * 组件性能优化：
+ * 1. 减轻state：只存储和组件渲染相关的数据。对于需要在多个方法之间共用的数据，建议放到this中。
+ * 2. 避免不必要的重新渲染：使用更新阶段的钩子函数shouldComponentUpdate(nextProps, nextState)，组件重新渲染（render）前会执行，当返回false时不会重新渲染。
+ * 3. 纯组件：React.PureComponent，自动实现shouldComponentUpdate钩子函数，内部通过比较前后两次props和state的值来决定是否重新渲染组件。
+ */
+class RandomNumber extends React.Component {
+
+  state = {
+    number: 0
+  }
+
+  render() {
+    console.log("RandomNumber render...");
+    return (
+      <div>
+        <p>随机数：{this.state.number}</p>
+        <button onClick={this.handleClick}>生成随机数</button>
+      </div>
+    );
+  }
+
+  handleClick = () => {
+    this.setState(() => {
+      return {
+        number: Math.floor(Math.random() * 2)
+      }
+    });
+  }
+
+  // 两次生成的随机数相同时不需要重新渲染组件
+  shouldComponentUpdate(nextProps, nextState) {
+    // nextState: 最新状态；this.state：当前状态
+    console.log("当前state", this.state, "最新state", nextState);
+    return this.state.number !== nextState.number;
+  }
+}
+root.render(<RandomNumber />)
+
+class PropRandomNumber extends React.Component {
+
+  state = {
+    number: 0
+  }
+
+  render() {
+    return (
+      <div>
+        <Number number={this.state.number} />
+        <button onClick={this.handleClick}>生成随机数</button>
+      </div>
+    );
+  }
+
+  handleClick = () => {
+    this.setState(() => {
+      return {
+        number: Math.floor(Math.random() * 3)
+      }
+    });
+  }
+}
+
+class Number extends React.Component {
+
+  render() {
+    console.log("Number render...");
+    return (
+      <p>随机数：{this.props.number}</p>
+    );
+  }
+
+  shouldComponentUpdate(nextProps) {
+    console.log("当前props", this.props, "最新props", nextProps);
+    return this.props.number !== nextProps.number;
+  }
+}
+root.render(<PropRandomNumber />);
+
+// 纯组件：shallow compare浅层对比。
+// 值类型比较值是否相等。
+// 引用类型比较对象的地址是否相同。（建议创建新对象而不是直接修改原对象。如果是数组则不要使用push/unshift方法而应该用concat或slice等返回新数组的方法）
+class PureRandomNumber extends React.PureComponent {
+
+  state = {
+    number: 0
+  }
+
+  render() {
+    console.log("PureRandomNumber render...");
+    return (
+      <div>
+        <p>随机数：{this.state.number}</p>
+        <button onClick={this.handleClick}>生成随机数</button>
+      </div>
+    );
+  }
+
+  handleClick = () => {
+    this.setState(() => {
+      return {
+        number: Math.floor(Math.random() * 2)
+      }
+    });
+  }
+}
+root.render(<PureRandomNumber />);
+
+/**
+ * React更新视图的思想是：只要state变化就重新渲染视图
+ * 问题：当组件中只有一个DOM元素需要更新时，也需要把整个组件的内容重新渲染到页面中？
+ * 理想状态：增量更新，只更新变化的部分。
+ * React使用虚拟DOM配合Diff算法实现增量更新。
+ * 
+ * 虚拟DOM：本质是一个js对象，React元素。描述页面上展示的内容。
+ * 
+ * 执行过程：
+ * 1. 第一次渲染时，React根据初始state，创建一个虚拟DOM对象树。
+ * 2. 根据虚拟DOM对象树生成真正的浏览器DOM树，渲染在浏览器中。
+ * 3. 当调用setState()方法导致数据变化时，重新根据新的state，创建新的虚拟DOM对象树。
+ * 4. 使用Diff算法与上一次得到的虚拟DOM对象树进行对比，找到需要更新的内容。
+ * 5. 最终，React只将需要更新的内容更新（patch）到浏览器DOM树中，重新渲染到浏览器中。
+ */
+
+/**
+ * react router 路由
+ */
+const Home = () => <p>Home</p>
+const About = () => <p>About</p>
+
+const RouterApp = () => {
+
+  return (
+    <div>
+      <p>react路由基础</p>
+      {/* 指定路由入口 */}
+      <NavLink to="/home">Home</NavLink>
+      &nbsp;
+      <NavLink to="/about">About</NavLink>
+      {/* 指定路由出口 */}
+      {/* 基础写法 */}
+      <Routes>
+        <Route path="/home" element={<Home />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/" element={<Navigate to="/about" />} />
+      </Routes>
+    </div>
+  )
+}
+
+root.render(
+  <Router>
+    <RouterApp />
+  </Router>
+);
+
+const UseRoutesApp = () => {
+
+  // 使用路由表
+  const elements = useRoutes([
+    {
+      path: '/about',
+      element: <About />
+    },
+    {
+      path: '/home',
+      element: <Home />
+    },
+    {
+      path: '/',
+      element: <Navigate to="/home" />
+    },
+  ]);
+
+  return (
+    <div>
+      <p>react路由表</p>
+      {/* 指定路由入口 */}
+      <NavLink to="/home">Home</NavLink>
+      &nbsp;
+      <NavLink to="/about">About</NavLink>
+      {/* 指定路由出口 */}
+      {elements}
+    </div>
+  );
+}
+
+root.render(
+  <Router>
+    <UseRoutesApp />
+  </Router>
+);
+
+
+// import routes from './routes';
+const OutUseRoutesApp = () => {
+
+  // 使用外部路由表
+  const elements = useRoutes(routes);
+
+  return (
+    <div>
+      <p>react外部路由表</p>
+      {/* 指定路由入口 */}
+      <NavLink to="/home">Home</NavLink>
+      &nbsp;
+      <NavLink to="/about">About</NavLink>
+      {/* 指定路由出口 */}
+      {elements}
+    </div>
+  );
+}
+
+root.render(
+  <Router>
+    <OutUseRoutesApp />
+  </Router>
+);
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))
